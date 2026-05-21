@@ -66,7 +66,20 @@ stdenv.mkDerivation {
   ];
 
   # Builds w/mimalloc if have right version, disable for now.
-  cmakeFlags = [ "-DSLANG_USE_MIMALLOC=${if enableMimalloc then "ON" else "OFF"}" ];
+  # SLANG_USE_THREADS=OFF: match what circt's FetchContent build of slang sets
+  # ("avoid race condition in BS::thread_pool" - see circt CMakeLists.txt).
+  # Mismatch causes AnalysisManager layout disagreement and stack smashing
+  # when circt-verilog constructs a slang::analysis::AnalysisManager.
+  cmakeFlags = [
+    "-DSLANG_USE_MIMALLOC=${if enableMimalloc then "ON" else "OFF"}"
+    "-DSLANG_USE_THREADS=OFF"
+  ];
+
+  # circt enables SLANG_ASSERT_ENABLED in its slang-consuming code whenever
+  # LLVM_ENABLE_ASSERTIONS is on. Several slang classes (e.g. BumpAllocator)
+  # have ABI-affecting `#if SLANG_ASSERT_ENABLED` fields, so the linked slang
+  # library must be built with the same define or circt-verilog will crash.
+  env.NIX_CFLAGS_COMPILE = "-DSLANG_ASSERT_ENABLED=1";
 
   postPatch = ''
     ln -s ${fmt_src} external/fmt

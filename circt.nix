@@ -105,6 +105,8 @@ stdenv.mkDerivation {
       --replace-fail slang_slang slang::slang
     substituteInPlace lib/Tools/circt-verilog-lsp-server/VerilogServerImpl/CMakeLists.txt \
       --replace-fail slang_slang slang::slang
+    substituteInPlace unittests/Conversion/ImportVerilog/CMakeLists.txt \
+      --replace-fail slang_slang slang::slang
   '';
 
   outputs = [
