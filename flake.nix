@@ -7,7 +7,7 @@
       type = "github";
       owner = "xinpian-tech";
       repo = "circt";
-      ref = "xinpian-main";
+      ref = "firrtl-sva";
       flake = false;
     };
     llvm-submodule-src = {
@@ -15,7 +15,7 @@
       owner = "llvm";
       repo = "llvm-project";
       # From circt submodule
-      rev = "b7152ff7026a05282b6ae91ccf150ede0217b08a";
+      rev = "040a641988f6ed6f4fab250706ca2b620c1de2d8";
       flake = false;
     };
     slang-src = {
