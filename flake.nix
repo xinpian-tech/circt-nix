@@ -7,7 +7,7 @@
       type = "github";
       owner = "xinpian-tech";
       repo = "circt";
-      ref = "xinpian-main";
+      ref = "contract";
       flake = false;
     };
     llvm-submodule-src = {
