@@ -2,9 +2,12 @@
   description = "circt-y things";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/master";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable-small";
     circt-src = {
-      url = "github:llvm/circt/firtool-1.147.0";
+      type = "github";
+      owner = "xinpian-tech";
+      repo = "circt";
+      ref = "xinpian-main";
       flake = false;
     };
     llvm-submodule-src = {
@@ -12,7 +15,7 @@
       owner = "llvm";
       repo = "llvm-project";
       # From circt submodule
-      rev = "a47d3636f953870d96fb6cc68817365fdad2f9fe";
+      rev = "b7152ff7026a05282b6ae91ccf150ede0217b08a";
       flake = false;
     };
     slang-src = {
@@ -49,8 +52,10 @@
                 llvmPackages = final.llvmPackages_git;
                 # TODO: Get this handled for us, spliced in?
                 buildLLVMPackages_circt = final.buildPackages.llvmPackages_circt;
+                buildSharedLibs = true;
               }
             );
+            inherit (llvmPackages_circt) libllvm mlir;
             circt = prev.callPackage ./circt.nix {
               inherit circt-src llvm-submodule-src;
               inherit (llvmPackages_circt) libllvm mlir llvm-third-party-src;
@@ -97,9 +102,6 @@
             };
         packages = (pkgs.lib.removeAttrs pkgs.circtFlakePkgs [ "llvmPackages_circt" ]) // {
           default = pkgs.circt; # default for `nix build` etc.
-          # selectively expose packages from llvmPackages_circt.
-          # clang/etc are not tested and patches/builds may break.
-          inherit (pkgs.circtFlakePkgs.llvmPackages_circt) libllvm mlir;
         };
         apps = pkgs.lib.genAttrs [ "firtool" "circt-lsp-server" "circt-verilog-lsp-server" ] (
           name:

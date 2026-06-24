@@ -48,6 +48,10 @@ let
 
   commonExtraCMakeFlags = [
     (lib.cmakeBool "LLVM_BUILD_UTILS" true)
+    # The pinned nixpkgs cc-wrapper may inject a different libc++ hardening mode.
+    # LLVM's benchmark subproject treats the resulting macro redefinition warning
+    # as fatal, and CIRCT does not need those benchmarks.
+    (lib.cmakeBool "LLVM_INCLUDE_BENCHMARKS" false)
     # For MLIR: Should just have to specify LLVM_LINK_LLVM_DYLIB,
     # set both to avoid attempting linking against libLLVM*.so if not built.
     (lib.cmakeBool "LLVM_BUILD_LLVM_DYLIB" enableSharedLibraries)

@@ -29,7 +29,7 @@
   enableAssertions ? true,
   enableOrTools ? false, # stdenv.hostPlatform.isLinux
   slang,
-  enableSlang ? true,
+  enableSlang ? false,
   enableLLHD ? false, # Drops llhd-sim -> lib output dep.
   withVerilator ? !stdenv.hostPlatform.isDarwin && stdenv.buildPlatform == stdenv.hostPlatform,
   z3,
@@ -77,8 +77,8 @@ stdenv.mkDerivation {
     glpk
     re2
   ]
-  ++ lib.optional enableSlang [ slang ]
-  ++ lib.optional withVerilator [ verilator ];
+  ++ lib.optionals enableSlang [ slang ]
+  ++ lib.optionals withVerilator [ verilator ];
   src = circt-src;
 
   postUnpack = ''
