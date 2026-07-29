@@ -9,7 +9,8 @@
   libllvm,
   mlir,
   lit,
-  circt-src,
+  circtSrc,
+  version,
   grpc,
   verilator,
   # TODO: Shouldn't need to specify these deps, fix in upstream nixpkgs!
@@ -20,7 +21,6 @@
   glpk,
   re2,
   python3,
-  llvm-submodule-src,
   llvm-third-party-src,
   ninja,
   doxygen,
@@ -33,23 +33,17 @@
   enableLLHD ? false, # Drops llhd-sim -> lib output dep.
   withVerilator ? !stdenv.hostPlatform.isDarwin && stdenv.buildPlatform == stdenv.hostPlatform,
   z3,
-  tag,
   buildSharedLibs ? libllvm.buildSharedLibs or false,
 }:
 
-# TODO: or-tools, needs cmake bits maybe?
-let
-  mkVer =
-    src:
-    let
-      date = builtins.substring 0 8 (src.lastModifiedDate or src.lastModified or "19700101");
-      rev = src.shortRev or "dirty";
-    in
-    "g${date}_${rev}";
+# slang's ABI depends on SLANG_ASSERT_ENABLED, which CIRCT's
+# cmake/modules/SlangCompilerOptions.cmake derives from LLVM_ENABLE_ASSERTIONS
+# but slang does not export. A mismatch builds and links cleanly, then
+# segfaults at runtime in slang::SourceManager::assignBuffer -- catch it here
+# instead. See slang.nix's enableAssertions.
+assert enableSlang -> slang.enableAssertions == enableAssertions;
 
-  versionSuffix = mkVer circt-src;
-  version = "${tag}${versionSuffix}";
-in
+# TODO: or-tools, needs cmake bits maybe?
 stdenv.mkDerivation {
   pname = "circt";
   inherit version;
@@ -77,14 +71,10 @@ stdenv.mkDerivation {
     glpk
     re2
   ]
-  ++ lib.optional enableSlang [ slang ]
-  ++ lib.optional withVerilator [ verilator ];
-  src = circt-src;
-
-  postUnpack = ''
-    rmdir $sourceRoot/llvm
-    ln -s ${llvm-submodule-src} $sourceRoot/llvm
-  '';
+  ++ lib.optional enableSlang slang
+  ++ lib.optional withVerilator verilator;
+  # circtSrc already includes the llvm submodule content (see flake.nix).
+  src = circtSrc;
 
   patches = [
     ./patches/circt-mlir-tblgen-path.patch
@@ -99,14 +89,26 @@ stdenv.mkDerivation {
     find test -type f -exec \
       sed -i -e 's,--test /usr/bin/env,--test ${lib.getBin coreutils}/bin/env,' \{\} \;
   ''
-  # slang library renamed to 'svlang'.
+  # CIRCT refers to slang's library as `slang_slang` (the target name it gets
+  # when built from source via FetchContent); an installed slang exports it as
+  # `slang::slang` instead. Rewrite every consumer rather than an enumerated
+  # list -- releases keep adding new ones, and a missed file only shows up as a
+  # late `cannot find -lslang_slang` link error (1.152.0 added the ImportVerilog
+  # unittest). Deliberately scoped to lib/ and unittests/: the top-level
+  # CMakeLists.txt also says `slang_slang`, but there it is the real target,
+  # inside the CIRCT_SLANG_BUILD_FROM_SOURCE branch we keep disabled.
   + lib.optionalString enableSlang ''
-    substituteInPlace lib/Conversion/ImportVerilog/CMakeLists.txt \
-      --replace-fail slang_slang slang::slang
-    substituteInPlace lib/Tools/circt-verilog-lsp-server/VerilogServerImpl/CMakeLists.txt \
-      --replace-fail slang_slang slang::slang
-    substituteInPlace unittests/Conversion/ImportVerilog/CMakeLists.txt \
-      --replace-fail slang_slang slang::slang
+    # `|| true`: grep exits 1 on no matches, which would otherwise abort the
+    # builder (set -e) before the clearer message below.
+    slangConsumers=$(grep -rl slang_slang lib unittests --include=CMakeLists.txt || true)
+    if [ -z "$slangConsumers" ]; then
+      echo "postPatch: no slang_slang references found under lib/ or unittests/;" \
+           "has CIRCT switched to slang::slang upstream?" >&2
+      exit 1
+    fi
+    for f in $slangConsumers; do
+      substituteInPlace "$f" --replace-fail slang_slang slang::slang
+    done
   '';
 
   outputs = [
@@ -153,6 +155,12 @@ stdenv.mkDerivation {
     # $out/share/arcilator/ ?
     install -Dt $out/bin bin/arcilator-runtime.h
   '';
+
+  # Avoid redefinition warning spam.
+  hardeningDisable = [
+    "libcxxhardeningextensive"
+    "libcxxhardeningfast"
+  ];
 
   meta = with lib; {
     description = " Circuit IR Compilers and Tools";

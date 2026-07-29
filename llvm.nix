@@ -3,7 +3,8 @@
   fetchpatch,
   applyPatches,
   runCommand,
-  llvm-submodule-src,
+  circtSrc,
+  llvmRev,
   llvmPackages,
   enableAssertions ? true,
   hostOnly ? true,
@@ -20,29 +21,22 @@ let
     else
       applyPatches {
         inherit src patches;
-        name = "llvm-src-${version}-patched";
+        name = "llvm-src-patched";
       };
 
-  # LLVM source to use:
-  monorepoSrc =
-    (patchsrc llvm-submodule-src [
-    ])
-    // {
-      passthru = {
-        owner = "llvm";
-        repo = "llvm-project";
-        inherit (llvm-submodule-src) rev;
-      };
+  # The llvm-project checkout bundled as circtSrc's `llvm` submodule
+  # (circtSrc is fetched with fetchSubmodules in flake.nix) -- always
+  # exactly what the pinned CIRCT release's submodule pin specifies.
+  # Wrapped via runCommand (a symlink, not a copy) to give it a proper
+  # name+passthru, the same way nixpkgs itself wraps monorepoSrc in
+  # pkgs/development/compilers/llvm/common/llvm/default.nix.
+  monorepoSrc = patchsrc (runCommand "llvm-monorepo-src" {
+    passthru = {
+      owner = "llvm";
+      repo = "llvm-project";
+      rev = llvmRev;
     };
-  # Version string:
-  mkVer =
-    src:
-    let
-      date = builtins.substring 0 8 (src.lastModifiedDate or src.lastModified or "19700101");
-      rev = src.shortRev or "dirty";
-    in
-    "${date}_${rev}";
-  version = mkVer llvm-submodule-src;
+  } "ln -s ${circtSrc}/llvm $out") [ ];
 
   release_version = "23.0.0";
 
@@ -63,14 +57,17 @@ let
       doCheck = false;
     });
 
-  # New LLVM package set using the pinned source.
+  # New LLVM package set using the pinned source. rev/rev-version only
+  # feed the reported LLVM version string; nixpkgs' sha256-based fetch of
+  # monorepoSrc (pkgs/development/compilers/llvm/common/common-let.nix) is
+  # never reached since monorepoSrc is supplied directly, so no sha256
+  # field is needed here.
   baseLLVMPkgs = llvmPackages.override {
     inherit monorepoSrc;
     officialRelease = null;
     gitRelease = {
-      rev = llvm-submodule-src.rev or "dirty";
-      rev-version = "${release_version}-${version}";
-      inherit (llvm-submodule-src) sha256;
+      rev = llvmRev;
+      rev-version = "${release_version}-g${builtins.substring 0 8 llvmRev}";
     };
     buildLlvmPackages = buildLLVMPackages_circt;
   };
@@ -88,6 +85,17 @@ let
             passthru = (old.passthru or { }) // {
               inherit buildSharedLibs;
             };
+            # nixpkgs' cc-wrapper unconditionally injects
+            # `-D_LIBCPP_HARDENING_MODE=...` (it's a no-op for our
+            # libstdc++ build), but LLVM's own build also defines it
+            # explicitly (e.g. for third-party/benchmark), so the two
+            # collide as a macro redefinition. That's normally just a
+            # warning, but benchmark's `-pedantic-errors` promotes it to
+            # a hard error, so disable this hardening flag entirely.
+            hardeningDisable = (old.hardeningDisable or [ ]) ++ [
+              "libcxxhardeningextensive"
+              "libcxxhardeningfast"
+            ];
           });
       mlir =
         (superLLVM.mlir.override {
@@ -101,14 +109,24 @@ let
             passthru = (old.passthru or { }) // {
               inherit buildSharedLibs;
             };
+
+            # Not strictly needed but propagates.
+            hardeningDisable = (old.hardeningDisable or [ ]) ++ [
+              "libcxxhardeningextensive"
+              "libcxxhardeningfast"
+            ];
+
           });
     }
   );
 in
 {
   inherit llvmPkgs;
-  llvm-third-party-src = runCommand "third-party-src" { } ''
-    cp -r ${monorepoSrc}/third-party $out
-  '';
+  # Just a subpath of monorepoSrc, not a copy of it: CIRCT only reads
+  # ${LLVM_THIRD_PARTY_DIR}/unittest (for googletest sources), so there's
+  # nothing to be gained from materialising it as its own store path.
+  # Interpolating keeps the string context, so monorepoSrc is still a
+  # build dependency.
+  llvm-third-party-src = "${monorepoSrc}/third-party";
 }
 // llvmPkgs # // tools // libraries
