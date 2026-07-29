@@ -67,15 +67,15 @@
           program = "${drv}/bin/${name}";
         };
 
-      # CIRCT release being tracked, kept up to date by ./update-llvm.sh.
-      # llvmRev is llvm-project's commit for this release's `llvm`
+      # Snapshot of xinpian-tech/circt's master branch.
+      # llvmRev is llvm-project's commit for this snapshot's `llvm`
       # submodule, used only for LLVM's reported version string --
       # circtSrc below is fetched with submodules included, so build
       # content always matches it regardless.
       circtPin = {
         version = "1.154.0";
-        rev = "87898a876f730a2ebc607dc9b83da487cba49119";
-        hash = "sha256-J8zEiD/RrLuFTIpbskfYjsED+MsNecO4ARiis/YX410=";
+        rev = "904828669c5bf4db03887e65764e49ac521cae6d";
+        hash = "sha256-3OESPQPtH/oNw1YKSq4S41Lcg4s1Ts8PPA18O6s5jtY=";
         llvmRev = "b1c56fb53a9c76d6b045ede49083b647ae049ffe";
       };
 
@@ -83,7 +83,7 @@
         final: prev:
         let
           circtSrc = prev.fetchFromGitHub {
-            owner = "llvm";
+            owner = "xinpian-tech";
             repo = "circt";
             inherit (circtPin) rev hash;
             fetchSubmodules = true;
