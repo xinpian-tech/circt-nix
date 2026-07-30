@@ -79,7 +79,9 @@
         llvmRev = "b1c56fb53a9c76d6b045ede49083b647ae049ffe";
       };
 
-      overlay =
+      # Build CIRCT and its LLVM package set only with this flake's pinned
+      # nixpkgs. The public overlay below re-exports these packages unchanged.
+      internalOverlay =
         final: prev:
         let
           circtSrc = prev.fetchFromGitHub {
@@ -128,13 +130,40 @@
           };
         in
         { inherit circtFlakePkgs; } // circtFlakePkgs;
+
+      mkCirctPkgs =
+        {
+          localSystem,
+          crossSystem ? null,
+        }:
+        import nixpkgs (
+          {
+            inherit localSystem;
+            overlays = [ internalOverlay ];
+          }
+          // lib.optionalAttrs (crossSystem != null) { inherit crossSystem; }
+        );
+
+      # A conventional overlay builds against the consumer's `final` package
+      # set. That is unsafe here because llvmPackages_git may describe a
+      # different LLVM major than CIRCT's pinned submodule. Re-export a package
+      # set built with our own nixpkgs while preserving the consumer's platform.
+      overlay =
+        _final: prev:
+        let
+          inherit (prev.stdenv) buildPlatform hostPlatform;
+          circtPkgs = mkCirctPkgs {
+            localSystem = buildPlatform;
+            crossSystem = if prev.lib.systems.equals buildPlatform hostPlatform then null else hostPlatform;
+          };
+        in
+        { inherit (circtPkgs) circtFlakePkgs; } // circtPkgs.circtFlakePkgs;
     in
     eachSystem (
       system:
       let
-        pkgs = import nixpkgs {
-          inherit system;
-          overlays = [ overlay ];
+        pkgs = mkCirctPkgs {
+          localSystem = system;
         };
       in
       rec {
