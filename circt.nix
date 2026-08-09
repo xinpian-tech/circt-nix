@@ -73,7 +73,6 @@ stdenv.mkDerivation {
   ]
   ++ lib.optional enableSlang slang
   ++ lib.optional withVerilator verilator;
-  # circtSrc already includes the llvm submodule content (see flake.nix).
   src = circtSrc;
 
   patches = [
