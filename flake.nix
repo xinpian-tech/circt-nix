@@ -74,8 +74,8 @@
       # content always matches it regardless.
       circtPin = {
         version = "1.154.0";
-        rev = "904828669c5bf4db03887e65764e49ac521cae6d";
-        hash = "sha256-3OESPQPtH/oNw1YKSq4S41Lcg4s1Ts8PPA18O6s5jtY=";
+        rev = "1a56cab5d0ebdfaf0808428b072591cd309c4b75";
+        hash = "sha256-UdfeakRBUjahemvnYwO/SRTiziEfM6q9Quy+WmwBAhk=";
         llvmRev = "b1c56fb53a9c76d6b045ede49083b647ae049ffe";
       };
 
