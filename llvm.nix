@@ -64,6 +64,7 @@ let
   # field is needed here.
   baseLLVMPkgs = llvmPackages.override {
     inherit monorepoSrc;
+    version = release_version;
     officialRelease = null;
     gitRelease = {
       rev = llvmRev;
