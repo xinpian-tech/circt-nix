@@ -73,7 +73,6 @@ stdenv.mkDerivation {
   ]
   ++ lib.optional enableSlang slang
   ++ lib.optional withVerilator verilator;
-  # circtSrc already includes the llvm submodule content (see flake.nix).
   src = circtSrc;
 
   patches = [
@@ -125,6 +124,7 @@ stdenv.mkDerivation {
     "-DCIRCT_TOOLS_INSTALL_DIR=${placeholder "out"}/bin"
     "-DCIRCT_LIBRARY_DIR=${placeholder "lib"}/lib"
     "-DCIRCT_LLHD_SIM_ENABLED=${if enableLLHD then "ON" else "OFF"}"
+    "-DMLIR_SOURCE_DIR=${lib.getDev mlir}"
     "-DMLIR_TABLEGEN_EXE=${lib.getOutput "bin" mlir}/bin/mlir-tblgen" # assumes not-cross for now
     (lib.cmakeBool "BUILD_SHARED_LIBS" buildSharedLibs)
   ]

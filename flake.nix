@@ -3,6 +3,20 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    circt-src = {
+      url = "github:xinpian-tech/circt/master";
+      flake = false;
+    };
+
+    llvm-src = {
+      type = "github";
+      owner = "llvm";
+      repo = "llvm-project";
+      rev = "e297b52ec9d8b5c38042e53ae5650922717970cd";
+      flake = false;
+    };
+
     # Pinned to the exact commit CIRCT's CMakeLists.txt FetchContent-pins
     # (v11.0 + ~85 commits). CIRCT's ImportVerilog tests are tuned to this
     # revision's diagnostics (llvm/circt#10717), so a plain v11.0 release
@@ -23,6 +37,8 @@
     {
       self,
       nixpkgs,
+      circt-src,
+      llvm-src,
       flake-compat,
       slang-src,
     }:
@@ -67,32 +83,18 @@
           program = "${drv}/bin/${name}";
         };
 
-      # CIRCT release being tracked, kept up to date by ./update-llvm.sh.
-      # llvmRev is llvm-project's commit for this release's `llvm`
-      # submodule, used only for LLVM's reported version string --
-      # circtSrc below is fetched with submodules included, so build
-      # content always matches it regardless.
-      circtPin = {
-        version = "1.160.0";
-        rev = "e0691dcb9864943b9bd25fcce35ec98eef7bdd1c";
-        hash = "sha256-KWh1z2Pvf+BVyzv6+ruaQRAULrIX9T1WjnIhpuTjzNc=";
-        llvmRev = "e297b52ec9d8b5c38042e53ae5650922717970cd";
-      };
+      circtVersion = "1.160.0";
 
       overlay =
         final: prev:
         let
-          circtSrc = prev.fetchFromGitHub {
-            owner = "llvm";
-            repo = "circt";
-            inherit (circtPin) rev hash;
-            fetchSubmodules = true;
-          };
+          circtSrc = circt-src;
+          llvmSrc = llvm-src;
           circtFlakePkgs = rec {
             llvmPackages_circt = prev.lib.recurseIntoAttrs (
               prev.callPackages ./llvm.nix {
-                inherit circtSrc;
-                inherit (circtPin) llvmRev;
+                inherit llvmSrc;
+                llvmRev = llvm-src.rev;
                 llvmPackages = final.llvmPackages_git;
                 # TODO: Get this handled for us, spliced in?
                 buildLLVMPackages_circt = final.buildPackages.llvmPackages_circt;
@@ -100,7 +102,7 @@
             );
             circt = prev.callPackage ./circt.nix {
               inherit circtSrc;
-              inherit (circtPin) version;
+              version = circtVersion;
               inherit (llvmPackages_circt) libllvm mlir llvm-third-party-src;
 
               # Override nixpkgs' lit, it uses pypi which is pinned to 18.1.8.
@@ -108,7 +110,7 @@
               lit = prev.lit.overrideAttrs (o: {
                 name = "lit-${llvmPackages_circt.libllvm.version}";
                 version = llvmPackages_circt.libllvm.version;
-                src = "${circtSrc}/llvm/llvm/utils/lit";
+                src = "${llvmSrc}/llvm/utils/lit";
                 patches = o.patches or [ ] ++ [
                   ./patches/lit-shell-script-runner-set-dyld-library-path.patch
                 ];
