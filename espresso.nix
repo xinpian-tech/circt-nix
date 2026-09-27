@@ -18,6 +18,13 @@ stdenv.mkDerivation rec {
 
   nativeBuildInputs = [ cmake ];
 
+  # The pre-ANSI declaration conflicts with current glibc headers.
+  postPatch = ''
+    substituteInPlace utility/port.h \
+      --replace-fail 'extern VOID_HACK srandom();' \
+                     'extern void srandom(unsigned int);'
+  '';
+
   meta = with lib; {
     description = "Tool to produce a minimal equivalent representation of a Boolean function";
     homepage = "https://github.com/chipsalliance/espresso";

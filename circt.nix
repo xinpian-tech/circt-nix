@@ -120,7 +120,7 @@ stdenv.mkDerivation {
     "-DLLVM_EXTERNAL_LIT=${lit}/bin/.lit-wrapped" # eep
     "-DLLVM_LIT_ARGS=-v"
     "-DLLVM_THIRD_PARTY_DIR=${llvm-third-party-src}"
-    "-DCIRCT_INSTALL_PACKAGE_DIR==${placeholder "dev"}/lib/cmake/circt"
+    "-DCIRCT_INSTALL_PACKAGE_DIR=${placeholder "dev"}/lib/cmake/circt"
     "-DCIRCT_TOOLS_INSTALL_DIR=${placeholder "out"}/bin"
     "-DCIRCT_LIBRARY_DIR=${placeholder "lib"}/lib"
     "-DCIRCT_LLHD_SIM_ENABLED=${if enableLLHD then "ON" else "OFF"}"

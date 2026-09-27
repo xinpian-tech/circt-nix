@@ -17,6 +17,23 @@
         "type": "github"
       }
     },
+    "cli11-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1740659131,
+        "narHash": "sha256-73dfpZDnKl0cADM4LTP3/eDFhwCdiHbEaGRF7ZyWsdQ=",
+        "owner": "CLIUtils",
+        "repo": "CLI11",
+        "rev": "4160d259d961cd393fd8d67590a8c7d210207348",
+        "type": "github"
+      },
+      "original": {
+        "owner": "CLIUtils",
+        "ref": "v2.5.0",
+        "repo": "CLI11",
+        "type": "github"
+      }
+    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -30,6 +47,57 @@
       "original": {
         "owner": "edolstra",
         "repo": "flake-compat",
+        "type": "github"
+      }
+    },
+    "fmt-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1740593668,
+        "narHash": "sha256-sUbxlYi/Aupaox3JjWFqXIjcaQa0LFjclQAOleT+FRA=",
+        "owner": "fmtlib",
+        "repo": "fmt",
+        "rev": "123913715afeb8a437e6388b4473fcc4753e1c9a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "fmtlib",
+        "ref": "11.1.4",
+        "repo": "fmt",
+        "type": "github"
+      }
+    },
+    "googletest-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1722432886,
+        "narHash": "sha256-1OJ2SeSscRBNr7zZ/a8bJGIqAnhkg45re0j3DtPfcXM=",
+        "owner": "google",
+        "repo": "googletest",
+        "rev": "b514bdc898e2951020cbdca1304b75f5950d1f59",
+        "type": "github"
+      },
+      "original": {
+        "owner": "google",
+        "ref": "v1.15.2",
+        "repo": "googletest",
+        "type": "github"
+      }
+    },
+    "ixwebsocket-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1778618314,
+        "narHash": "sha256-nzkz/18q2h+/CcjMYVo2XmkUp5/50oakdGsWxp4KKHM=",
+        "owner": "machinezone",
+        "repo": "IXWebSocket",
+        "rev": "173f442474c4d9db16184c5e15cc96e07605e0e0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "machinezone",
+        "repo": "IXWebSocket",
+        "rev": "173f442474c4d9db16184c5e15cc96e07605e0e0",
         "type": "github"
       }
     },
@@ -66,13 +134,36 @@
         "type": "github"
       }
     },
+    "nlohmann-json-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1701207391,
+        "narHash": "sha256-7F0Jon+1oWL7uqet5i1IgHX0fUw/+z0QwEcA3zs5xHg=",
+        "owner": "nlohmann",
+        "repo": "json",
+        "rev": "9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nlohmann",
+        "ref": "v3.11.3",
+        "repo": "json",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "circt-src": "circt-src",
+        "cli11-src": "cli11-src",
         "flake-compat": "flake-compat",
+        "fmt-src": "fmt-src",
+        "googletest-src": "googletest-src",
+        "ixwebsocket-src": "ixwebsocket-src",
         "llvm-src": "llvm-src",
         "nixpkgs": "nixpkgs",
-        "slang-src": "slang-src"
+        "nlohmann-json-src": "nlohmann-json-src",
+        "slang-src": "slang-src",
+        "zlib-src": "zlib-src"
       }
     },
     "slang-src": {
@@ -89,6 +180,23 @@
         "owner": "MikePopoloski",
         "repo": "slang",
         "rev": "44dc55f99b9c64971893013e7931e643fbedcf23",
+        "type": "github"
+      }
+    },
+    "zlib-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1739919615,
+        "narHash": "sha256-L/gubPuMLJ1nq+AVZdwhcv6mkgBYzKJ6ncoYM93LvJ0=",
+        "owner": "madler",
+        "repo": "zlib",
+        "rev": "5a82f71ed1dfc0bec044d9702463dbdf84ea3b71",
+        "type": "github"
+      },
+      "original": {
+        "owner": "madler",
+        "repo": "zlib",
+        "rev": "5a82f71ed1dfc0bec044d9702463dbdf84ea3b71",
         "type": "github"
       }
     }

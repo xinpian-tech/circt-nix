@@ -26,6 +26,31 @@
       flake = false;
     };
 
+    cli11-src = {
+      url = "github:CLIUtils/CLI11/v2.5.0";
+      flake = false;
+    };
+    fmt-src = {
+      url = "github:fmtlib/fmt/11.1.4";
+      flake = false;
+    };
+    googletest-src = {
+      url = "github:google/googletest/v1.15.2";
+      flake = false;
+    };
+    ixwebsocket-src = {
+      url = "github:machinezone/IXWebSocket/173f442474c4d9db16184c5e15cc96e07605e0e0";
+      flake = false;
+    };
+    nlohmann-json-src = {
+      url = "github:nlohmann/json/v3.11.3";
+      flake = false;
+    };
+    zlib-src = {
+      url = "github:madler/zlib/5a82f71ed1dfc0bec044d9702463dbdf84ea3b71";
+      flake = false;
+    };
+
     # From README.md: https://github.com/edolstra/flake-compat
     flake-compat = {
       url = "github:edolstra/flake-compat";
@@ -41,6 +66,7 @@
       llvm-src,
       flake-compat,
       slang-src,
+      ...
     }:
     let
       inherit (nixpkgs) lib;
@@ -90,43 +116,68 @@
         let
           circtSrc = circt-src;
           llvmSrc = llvm-src;
-          circtFlakePkgs = rec {
-            llvmPackages_circt = prev.lib.recurseIntoAttrs (
-              prev.callPackages ./llvm.nix {
-                inherit llvmSrc;
-                llvmRev = llvm-src.rev;
-                llvmPackages = final.llvmPackages_git;
-                # TODO: Get this handled for us, spliced in?
-                buildLLVMPackages_circt = final.buildPackages.llvmPackages_circt;
-              }
-            );
-            circt = prev.callPackage ./circt.nix {
-              inherit circtSrc;
-              version = circtVersion;
-              inherit (llvmPackages_circt) libllvm mlir llvm-third-party-src;
+          baseLLVM = prev.lib.recurseIntoAttrs (
+            prev.callPackages ./llvm.nix {
+              inherit llvmSrc;
+              llvmRev = llvm-src.rev;
+              llvmPackages = final.llvmPackages_git;
+              # TODO: Get this handled for us, spliced in?
+              buildLLVMPackages_circt = final.buildPackages.llvmPackages_circt;
+            }
+          );
+          baseSlang = prev.callPackage ./slang.nix { inherit slang-src; };
+          baseCirct = prev.callPackage ./circt.nix {
+            inherit circtSrc;
+            version = circtVersion;
+            inherit (baseLLVM) libllvm mlir llvm-third-party-src;
 
-              # Override nixpkgs' lit, it uses pypi which is pinned to 18.1.8.
-              # We need newer version. Fix this upstream!
-              lit = prev.lit.overrideAttrs (o: {
-                name = "lit-${llvmPackages_circt.libllvm.version}";
-                version = llvmPackages_circt.libllvm.version;
-                src = "${llvmSrc}/llvm/utils/lit";
-                patches = o.patches or [ ] ++ [
-                  ./patches/lit-shell-script-runner-set-dyld-library-path.patch
-                ];
-              });
-              # CIRCT statically links slang (libsvlang.a), so this variant is
-              # embedded in CIRCT and never shipped as a CLI -- disabling
-              # threads here matches how CIRCT configures slang when it builds
-              # it from source, while leaving the standalone `slang` package
-              # (with its -j option) untouched.
-              slang = slang.override { enableThreads = false; };
-            };
-
+            # Override nixpkgs' lit, it uses pypi which is pinned to 18.1.8.
+            # We need newer version. Fix this upstream!
+            lit = prev.lit.overrideAttrs (o: {
+              name = "lit-${baseLLVM.libllvm.version}";
+              version = baseLLVM.libllvm.version;
+              src = "${llvmSrc}/llvm/utils/lit";
+              patches = o.patches or [ ] ++ [
+                ./patches/lit-shell-script-runner-set-dyld-library-path.patch
+              ];
+            });
+            # CIRCT statically links slang (libsvlang.a), so this variant is
+            # embedded in CIRCT and never shipped as a CLI -- disabling
+            # threads here matches how CIRCT configures slang when it builds
+            # it from source, while leaving the standalone `slang` package
+            # (with its -j option) untouched.
+            slang = baseSlang.override { enableThreads = false; };
+          };
+          core = import ./build-support.nix {
+            pkgs = prev;
+            upstreamLLVM = baseLLVM;
+            inherit
+              baseCirct
+              baseSlang
+              llvm-src
+              slang-src
+              ;
+          };
+          circtFlakePkgs = {
+            llvmPackages_circt = core.llvmPackages;
+            inherit (core)
+              libllvm
+              mlir
+              mkCirct
+              slang
+              ;
+            circt = core.mkCirct { };
+            circtPython = core.python;
+            # The wrapper needs Bash to load its standard-header search paths.
+            clang-tools = prev.clang-tools.overrideAttrs (old: {
+              postInstall =
+                (old.postInstall or "")
+                + ''
+                  substituteInPlace "$out/bin/clang-tidy" \
+                    --replace-fail '#!/bin/sh' '#!${prev.bash}/bin/bash'
+                '';
+            });
             espresso = prev.callPackage ./espresso.nix { };
-            slang = prev.callPackage ./slang.nix {
-              inherit slang-src;
-            };
           };
         in
         { inherit circtFlakePkgs; } // circtFlakePkgs;
@@ -141,11 +192,11 @@
       in
       rec {
         formatter = pkgs.nixfmt-tree;
-        devShells = {
-          default = import ./shell.nix { inherit pkgs; };
-        }
-        //
-          pkgs.lib.optionalAttrs
+        devShells =
+          {
+            default = import ./shell.nix { inherit pkgs; };
+          }
+          // pkgs.lib.optionalAttrs
             (
               !pkgs.stdenv.isDarwin # libcxxabi git on Darwin is broken?
             )
@@ -155,12 +206,17 @@
                 llvmPkgs = pkgs.llvmPackages_git; # NOT same as submodule.
               };
             };
-        packages = (pkgs.lib.removeAttrs pkgs.circtFlakePkgs [ "llvmPackages_circt" ]) // {
-          default = pkgs.circt; # default for `nix build` etc.
-          # selectively expose packages from llvmPackages_circt.
-          # clang/etc are not tested and patches/builds may break.
-          inherit (pkgs.circtFlakePkgs.llvmPackages_circt) libllvm mlir;
-        };
+        packages =
+          (pkgs.lib.removeAttrs pkgs.circtFlakePkgs [
+            "llvmPackages_circt"
+            "mkCirct"
+          ])
+          // {
+            default = pkgs.circt; # default for `nix build` etc.
+            # selectively expose packages from llvmPackages_circt.
+            # clang/etc are not tested and patches/builds may break.
+            inherit (pkgs.circtFlakePkgs.llvmPackages_circt) libllvm mlir;
+          };
         apps = pkgs.lib.genAttrs [ "firtool" "circt-lsp-server" "circt-verilog-lsp-server" ] (
           name:
           mkApp {

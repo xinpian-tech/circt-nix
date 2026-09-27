@@ -19,6 +19,13 @@ Only x86_64-linux has been tested.
 
 Built with assertions enabled.
 
+Common LLVM/MLIR and CIRCT packaging adaptations live in `build-support.nix`,
+with the Python environment in `python.nix`. The default package and downstream
+CI variants share these adaptations through
+`legacyPackages.<system>.circtFlakePkgs.mkCirct`.
+Downstream CI selects build variants, test targets and runner cache settings;
+source compatibility patches and dependency pins belong in this repository.
+
 ## Install
 
 This requires `nix`, preferably with flake support.
