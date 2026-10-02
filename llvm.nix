@@ -36,7 +36,7 @@ let
     };
   } "ln -s ${llvmSrc} $out") [ ];
 
-  release_version = "23.0.0";
+  release_version = "24.0.0";
 
   commonExtraCMakeFlags = [
     (lib.cmakeBool "LLVM_BUILD_UTILS" true)
@@ -62,6 +62,7 @@ let
   # field is needed here.
   baseLLVMPkgs = llvmPackages.override {
     inherit monorepoSrc;
+    version = "${release_version}-git";
     officialRelease = null;
     gitRelease = {
       rev = llvmRev;

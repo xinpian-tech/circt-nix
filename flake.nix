@@ -13,7 +13,7 @@
       type = "github";
       owner = "llvm";
       repo = "llvm-project";
-      rev = "b1c56fb53a9c76d6b045ede49083b647ae049ffe";
+      rev = "e297b52ec9d8b5c38042e53ae5650922717970cd";
       flake = false;
     };
 
