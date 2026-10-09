@@ -3,11 +3,11 @@
     "circt-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1790607178,
-        "narHash": "sha256-IuJhcWzGoHGeCtr/2T90QgwJNczp0JTzq4+ksAtvvqo=",
+        "lastModified": 1790966098,
+        "narHash": "sha256-59wq+Mm8VBTDMyP3VhLLPCYPadg3MvE/JlX+fqaolaA=",
         "owner": "xinpian-tech",
         "repo": "circt",
-        "rev": "a72ba7ea79003e4b120041bf553d527955b9190b",
+        "rev": "4a1a1ae24590322263cc68e852d975010d72a766",
         "type": "github"
       },
       "original": {
